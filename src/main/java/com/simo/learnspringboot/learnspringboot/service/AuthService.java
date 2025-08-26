@@ -29,7 +29,7 @@ public class AuthService {
         this.jwtUtil = jwtUtil;
     }
 
-    public String register(RegisterRequestDto request) {
+    public AuthResponseDto register(RegisterRequestDto request) {
         if (userRepository.findByEmail(request.email()).isPresent()) {
             throw new RuntimeException("Email already in use!");
         }
@@ -41,7 +41,15 @@ public class AuthService {
         user.setRole("ROLE_USER");
 
         userRepository.save(user);
-        return "User registered successfully!";
+
+        String token = jwtUtil.generateToken(user.getEmail());
+
+        return new AuthResponseDto(
+                token,
+                user.getEmail(),
+                user.getRole(),
+                "User registered successfully!"
+        );
     }
 
     public AuthResponseDto login(LoginRequestDto request) {
@@ -56,6 +64,11 @@ public class AuthService {
 
         String token = jwtUtil.generateToken(user.getEmail());
 
-        return new AuthResponseDto(token, user.getEmail(), user.getRole());
+        return new AuthResponseDto(
+                token,
+                user.getEmail(),
+                user.getRole(),
+                "Logged in successfully!"
+        );
     }
 }
