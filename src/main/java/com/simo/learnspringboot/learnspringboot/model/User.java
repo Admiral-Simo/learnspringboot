@@ -1,7 +1,26 @@
 package com.simo.learnspringboot.learnspringboot.model;
 
-@lombok.Data
+import jakarta.persistence.*;
+import lombok.Data;
+
+import java.util.Set;
+import java.util.UUID;
+
+@Data
+@Entity
+@Table(name = "users") // 👈 avoid reserved keyword "user"
 public class User {
+
+    @Id
+    @GeneratedValue
+    private UUID id;
+
     private String name;
+
+    @Column(unique = true, nullable = false)
     private String email;
+
+    private String password;
+
+    private String role; // e.g., ROLE_USER, ROLE_ADMIN
 }
