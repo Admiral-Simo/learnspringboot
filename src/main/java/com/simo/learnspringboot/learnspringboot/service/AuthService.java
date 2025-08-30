@@ -38,6 +38,7 @@ public class AuthService {
         user.setName(request.name());
         user.setEmail(request.email());
         user.setPassword(passwordEncoder.encode(request.password()));
+
         if (request.email().equals("simo@gmail.com")) {
             user.setRole("ROLE_ADMIN");
         } else {
