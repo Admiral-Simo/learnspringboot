@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.simo.learnspringboot.learnspringboot.dto.AuthResponseDto;
 import com.simo.learnspringboot.learnspringboot.dto.LoginRequestDto;
 import com.simo.learnspringboot.learnspringboot.dto.RegisterRequestDto;
+import com.simo.learnspringboot.learnspringboot.exception_handler.GlobalExceptionHandler;
+import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.EmailAlreadyInUseException;
+import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.InvalidCredentialsException;
 import com.simo.learnspringboot.learnspringboot.service.AuthService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,17 +34,21 @@ class AuthControllerTest {
     @InjectMocks
     private AuthController authController;
 
+
     @BeforeEach
     void setUp() {
+
         MockitoAnnotations.openMocks(this);
         objectMapper = new ObjectMapper();
-        mockMvc = MockMvcBuilders.standaloneSetup(authController).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(authController)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
     }
 
     @Test
     void shouldRegisterUserSuccessfully() throws Exception {
         RegisterRequestDto request = new RegisterRequestDto(
-                "Alice", "alice@example.com", "password123"
+                "Alice", "alice@example.com", "Password@123"
         );
 
         AuthResponseDto mockResponse = new AuthResponseDto(
@@ -68,19 +75,19 @@ class AuthControllerTest {
     @Test
     void shouldReturnErrorStatusOnRegisterFailure() throws Exception {
         RegisterRequestDto request = new RegisterRequestDto(
-                "Alice", "alice@example.com", "password123"
+                "Alice", "alice@example.com", "Password@123"
         );
 
-        when(authService.register(request))
-                .thenThrow(new RuntimeException("Email already in use!"));
+        when(authService.register(any(RegisterRequestDto.class)))
+                .thenThrow(new EmailAlreadyInUseException("Email already in use!"));
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isInternalServerError())
-                .andExpect(content().string("Email already in use!"));
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.details").value("Email already in use!"));
 
-        verify(authService, times(1)).register(request);
+        verify(authService, times(1)).register(any(RegisterRequestDto.class));
     }
 
     @Test
@@ -117,13 +124,13 @@ class AuthControllerTest {
         );
 
         when(authService.login(request))
-                .thenThrow(new RuntimeException("Invalid credentials"));
+                .thenThrow(new InvalidCredentialsException("Invalid credentials"));
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isInternalServerError())
-                .andExpect(content().string("Invalid credentials"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.details").value("Invalid credentials"));
 
         verify(authService, times(1)).login(request);
     }

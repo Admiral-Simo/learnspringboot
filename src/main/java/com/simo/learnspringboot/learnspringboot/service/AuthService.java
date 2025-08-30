@@ -3,6 +3,8 @@ package com.simo.learnspringboot.learnspringboot.service;
 import com.simo.learnspringboot.learnspringboot.dto.AuthResponseDto;
 import com.simo.learnspringboot.learnspringboot.dto.LoginRequestDto;
 import com.simo.learnspringboot.learnspringboot.dto.RegisterRequestDto;
+import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.EmailAlreadyInUseException;
+import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.InvalidCredentialsException;
 import com.simo.learnspringboot.learnspringboot.model.User;
 import com.simo.learnspringboot.learnspringboot.repository.UserRepository;
 import com.simo.learnspringboot.learnspringboot.security.JwtUtil;
@@ -31,7 +33,7 @@ public class AuthService {
 
     public AuthResponseDto register(RegisterRequestDto request) {
         if (userRepository.findByEmail(request.email()).isPresent()) {
-            throw new RuntimeException("Email already in use!");
+            throw new EmailAlreadyInUseException("Email already in use!");
         }
 
         User user = new User();
@@ -65,7 +67,7 @@ public class AuthService {
         );
 
         User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new InvalidCredentialsException("Email or password is incorrect."));
 
         String token = jwtUtil.generateToken(user.getEmail());
 
