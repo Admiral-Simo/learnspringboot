@@ -3,6 +3,7 @@ package com.simo.learnspringboot.learnspringboot.model;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.UUID;
 
@@ -14,6 +15,9 @@ public class User {
     @Id
     @GeneratedValue
     private UUID id;
+
+    private String passwordResetToken;
+    private LocalDateTime tokenExpiryDate;
 
     private String name;
 
