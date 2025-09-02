@@ -33,4 +33,20 @@ class UserRepositoryTest {
         assertThat(found).isPresent();
         assertThat(found.get().getName()).isEqualTo("Alice");
     }
+
+    @Test
+    void shouldUpdateUserPassword() {
+        // given
+        User user = new User();
+        user.setName("Simo");
+        user.setEmail("simo@gmail.com");
+        user.setPassword("oldPassword");
+        user = userRepository.save(user);
+
+        user.setPassword("hashedPassword2");
+        User result = userRepository.save(user);
+
+
+        assertThat(result.getPassword()).isEqualTo("hashedPassword2");
+    }
 }
