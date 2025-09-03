@@ -8,7 +8,7 @@ import java.util.UUID;
 
 @Data
 @Entity
-@Table(name = "users") // 👈 avoid reserved keyword "user"
+@Table(name = "users")
 public class User {
 
     @Id

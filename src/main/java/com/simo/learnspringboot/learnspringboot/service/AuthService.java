@@ -1,8 +1,6 @@
 package com.simo.learnspringboot.learnspringboot.service;
 
-import com.simo.learnspringboot.learnspringboot.dto.AuthResponseDto;
-import com.simo.learnspringboot.learnspringboot.dto.LoginRequestDto;
-import com.simo.learnspringboot.learnspringboot.dto.RegisterRequestDto;
+import com.simo.learnspringboot.learnspringboot.dto.*;
 import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.EmailAlreadyInUseException;
 import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.InvalidCredentialsException;
 import com.simo.learnspringboot.learnspringboot.model.User;
@@ -13,6 +11,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.UUID;
+
 @Service
 public class AuthService {
 
@@ -20,15 +22,18 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final EmailService emailService;
 
     public AuthService(AuthenticationManager authenticationManager,
                        UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
+                       EmailService emailService,
                        JwtUtil jwtUtil) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
+        this.emailService = emailService;
     }
 
     public AuthResponseDto register(RegisterRequestDto request) {
@@ -77,5 +82,33 @@ public class AuthService {
                 user.getRole(),
                 "Logged in successfully!"
         );
+    }
+
+    public String forgetPassword(ForgetPasswordRequestDto request) {
+        userRepository.findByEmail(request.email()).ifPresent(user -> {
+            String token = UUID.randomUUID().toString();
+            user.setPasswordResetToken(token);
+            user.setTokenExpiryDate(LocalDateTime.now().plusMinutes(20));
+            userRepository.save(user);
+            emailService.sendResetPasswordEmail(user.getEmail(), token);
+        });
+
+        return "If an account with that email exists, a password reset link has been sent.";
+    }
+
+    public String resetPassword(ResetPasswordRequestDto request) {
+        User user = userRepository.findByPasswordResetToken(request.token())
+                .orElseThrow(() -> new InvalidCredentialsException("Invalid or expired password reset token."));
+
+        if (user.getTokenExpiryDate().isBefore(LocalDateTime.now())) {
+            throw new InvalidCredentialsException("Invalid or expired password reset token.");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        user.setPasswordResetToken(null);
+        user.setTokenExpiryDate(null);
+        userRepository.save(user);
+
+        return "Password has been successfully reset.";
     }
 }

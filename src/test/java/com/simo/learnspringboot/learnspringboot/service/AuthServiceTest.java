@@ -1,8 +1,6 @@
 package com.simo.learnspringboot.learnspringboot.service;
 
-import com.simo.learnspringboot.learnspringboot.dto.AuthResponseDto;
-import com.simo.learnspringboot.learnspringboot.dto.LoginRequestDto;
-import com.simo.learnspringboot.learnspringboot.dto.RegisterRequestDto;
+import com.simo.learnspringboot.learnspringboot.dto.*;
 import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.EmailAlreadyInUseException;
 import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.InvalidCredentialsException;
 import com.simo.learnspringboot.learnspringboot.model.User;
@@ -18,6 +16,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -38,6 +37,9 @@ public class AuthServiceTest {
 
     @Mock
     private JwtUtil jwtUtil;
+
+    @Mock
+    private EmailService emailService;
 
     @InjectMocks
     private AuthService authService;
@@ -111,9 +113,7 @@ public class AuthServiceTest {
         when(userRepository.findByEmail("simo@gmail.com"))
                 .thenReturn(Optional.of(existingUser));
 
-        EmailAlreadyInUseException thrown = assertThrows(EmailAlreadyInUseException.class, () -> {
-            authService.register(request);
-        });
+        EmailAlreadyInUseException thrown = assertThrows(EmailAlreadyInUseException.class, () -> authService.register(request));
         assertThat(thrown).isNotNull();
         assertThat(thrown.getMessage()).isEqualTo("Email already in use!");
 
@@ -161,11 +161,74 @@ public class AuthServiceTest {
         when(userRepository.findByEmail("alice@example.com"))
                 .thenReturn(Optional.empty());
 
-        InvalidCredentialsException thrown = assertThrows(InvalidCredentialsException.class, () -> {
-            authService.login(request);
-        });
+        InvalidCredentialsException thrown = assertThrows(InvalidCredentialsException.class, () -> authService.login(request));
 
         assertThat(thrown).isNotNull();
         assertThat(thrown.getMessage()).isEqualTo("Email or password is incorrect.");
+    }
+
+    @Test
+    void forgetPassword_UserExists_ShouldGenerateTokenAndSendEmail() {
+        String email = "user@gmail.com";
+        var request = new ForgetPasswordRequestDto(email);
+        User user = new User();
+        user.setEmail(email);
+
+        when(userRepository.findByEmail(email))
+                .thenReturn(Optional.of(user));
+
+        String message = authService.forgetPassword(request);
+
+        verify(userRepository).save(any(User.class));
+        verify(emailService).sendResetPasswordEmail(eq(email), anyString());
+        assertThat(message).isEqualTo("If an account with that email exists, a password reset link has been sent.");
+    }
+
+    @Test
+    void forgetPassword_UserDoesNotExists_ShouldNotSendEmail() {
+        String email = "user@gmail.com";
+        var request = new ForgetPasswordRequestDto(email);
+        when(userRepository.findByEmail(email))
+                .thenReturn(Optional.empty());
+
+        String message = authService.forgetPassword(request);
+
+        verify(userRepository, never()).save(any(User.class));
+        verify(emailService, never()).sendResetPasswordEmail(anyString(), anyString());
+        assertThat(message).isEqualTo("If an account with that email exists, a password reset link has been sent.");
+    }
+
+    @Test
+    void resetPassword_ValidToken_ShouldUpdatePassword() {
+        var request = new ResetPasswordRequestDto("mockToken", "NewPassword@123");
+        User user = new User();
+        user.setTokenExpiryDate(LocalDateTime.now().plusMinutes(5));
+
+        when(passwordEncoder.encode("NewPassword@123"))
+                .thenReturn("encodedNewPassword");
+
+        when(userRepository.findByPasswordResetToken("mockToken"))
+                .thenReturn(Optional.of(user));
+
+        String message = authService.resetPassword(request);
+
+        assertThat(message).isEqualTo("Password has been successfully reset.");
+        assertThat(user.getPassword()).isEqualTo("encodedNewPassword");
+        assertThat(user.getPasswordResetToken()).isNull();
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void resetPassword_InvalidToken_ShouldThrowException() {
+        var request = new ResetPasswordRequestDto("invalidToken", "NewPassword@123");
+
+        when(userRepository.findByPasswordResetToken("invalidToken"))
+                .thenReturn(Optional.empty());
+
+        InvalidCredentialsException thrown = assertThrows(InvalidCredentialsException.class, () -> authService.resetPassword(request) );
+
+        assertThat(thrown).isNotNull();
+        assertThat(thrown.getMessage()).isEqualTo("Invalid or expired password reset token.");
+        verify(userRepository, never()).save(any(User.class));
     }
 }
