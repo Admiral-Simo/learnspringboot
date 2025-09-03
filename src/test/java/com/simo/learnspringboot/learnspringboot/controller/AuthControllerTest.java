@@ -134,4 +134,58 @@ class AuthControllerTest {
 
         verify(authService, times(1)).login(request);
     }
+
+    @Test
+    void shouldReturnBadRequestWhenPasswordFormatIsInvalid() throws Exception {
+        // Prepare an invalid request DTO
+        RegisterRequestDto request = new RegisterRequestDto(
+                "simo",
+                "something@gmail.com",
+                "pass" // Invalid: bad format
+        );
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.password").value("password size should be between 8 and 20, contain at least one digit, one lowercase letter, one uppercase letter, and one special character."));
+
+        verify(authService, never()).register(any(RegisterRequestDto.class));
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenEmailIsInvalid() throws Exception {
+        // Prepare an invalid request DTO
+        RegisterRequestDto request = new RegisterRequestDto(
+                "simo",
+                "somethinggmail.com", // Invalid: bad format
+                "Password@123"
+        );
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.email").value("email should be valid"));
+
+        verify(authService, never()).register(any(RegisterRequestDto.class));
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenEmailIsEmpty() throws Exception {
+        // Prepare an invalid request DTO
+        RegisterRequestDto request = new RegisterRequestDto(
+                "simo",
+                "", // Invalid: empty email
+                "Password@123"
+        );
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.email").value("email is required"));
+
+        verify(authService, never()).register(any(RegisterRequestDto.class));
+    }
 }
