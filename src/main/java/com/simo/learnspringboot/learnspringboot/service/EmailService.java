@@ -2,6 +2,7 @@ package com.simo.learnspringboot.learnspringboot.service;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -46,7 +47,7 @@ public class EmailService {
 
             javaMailSender.send(message);
 
-        } catch (MessagingException e) {
+        } catch (MailException | MessagingException e) {
             throw new RuntimeException("Failed to send email", e);
         }
     }

@@ -18,7 +18,14 @@ class UserControllerTest {
     private MockMvc mockMvc;
 
     @Test
-    @WithMockUser(username = "toufik@gmail.com", roles = {"USER"})
+    @WithMockUser(username = "toufik@gmail.com")
+    void userShouldAccessUserRouteWithoutAdminRole() throws Exception {
+        mockMvc.perform(get("/user"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "toufik@gmail.com")
     void userCannotAccessAdminEndpoint() throws Exception {
         mockMvc.perform(get("/admin"))
                 .andExpect(status().isForbidden());

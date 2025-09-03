@@ -60,8 +60,8 @@ public class GlobalExceptionHandler {
     }
 
     // Fallback for unexpected errors (500)
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<Object> handleAllExceptions(Exception ex) {
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<Object> handleAllExceptions(RuntimeException ex) {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());

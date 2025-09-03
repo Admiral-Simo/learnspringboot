@@ -2,26 +2,36 @@ package com.simo.learnspringboot.learnspringboot.service;
 
 import jakarta.mail.BodyPart;
 import jakarta.mail.Multipart;
+import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class EmailServiceTest {
+    @Mock
+    JavaMailSender mailSender;
+
+    @InjectMocks
+    EmailService emailService;
 
     @Test
     void testSendResetPasswordEmail() throws Exception {
         // Arrange
-        JavaMailSender mailSender = mock(JavaMailSender.class);
         MimeMessage mimeMessage = new JavaMailSenderImpl().createMimeMessage();
 
         when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
-
-        EmailService emailService = new EmailService(mailSender);
 
         String recipient = "test@example.com";
         String token = "dummy-token-123";
@@ -51,8 +61,7 @@ class EmailServiceTest {
     private String extractContent(Object content) throws Exception {
         if (content instanceof String) {
             return (String) content;
-        } else if (content instanceof Multipart) {
-            Multipart multipart = (Multipart) content;
+        } else if (content instanceof Multipart multipart) {
             for (int i = 0; i < multipart.getCount(); i++) {
                 BodyPart bodyPart = multipart.getBodyPart(i);
                 String result = extractContent(bodyPart.getContent());
@@ -62,5 +71,22 @@ class EmailServiceTest {
             }
         }
         return null;
+    }
+
+    @Test
+    void testSendPasswordResetEmail_Failure() {
+        doThrow(new MailSendException("Failed to connect"))
+                .when(mailSender).send(any(MimeMessage.class));
+
+        when(mailSender.createMimeMessage()).thenReturn(new JavaMailSenderImpl().createMimeMessage());
+
+        // Act & Assert
+        RuntimeException thrown = assertThrows(RuntimeException.class, () -> {
+            emailService.sendResetPasswordEmail("test@gmail.com", "token-123");
+        });
+
+        assertThat(thrown.getMessage()).isEqualTo("Failed to send email");
+        assertThat(thrown.getCause()).isInstanceOf(MailSendException.class);
+        assertThat(thrown.getCause().getMessage()).isEqualTo("Failed to connect");
     }
 }
