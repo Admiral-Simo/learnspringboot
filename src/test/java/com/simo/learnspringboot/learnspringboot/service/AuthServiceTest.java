@@ -3,6 +3,8 @@ package com.simo.learnspringboot.learnspringboot.service;
 import com.simo.learnspringboot.learnspringboot.dto.AuthResponseDto;
 import com.simo.learnspringboot.learnspringboot.dto.LoginRequestDto;
 import com.simo.learnspringboot.learnspringboot.dto.RegisterRequestDto;
+import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.EmailAlreadyInUseException;
+import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.InvalidCredentialsException;
 import com.simo.learnspringboot.learnspringboot.model.User;
 import com.simo.learnspringboot.learnspringboot.repository.UserRepository;
 import com.simo.learnspringboot.learnspringboot.security.JwtUtil;
@@ -19,6 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.Optional;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -108,11 +111,11 @@ public class AuthServiceTest {
         when(userRepository.findByEmail("simo@gmail.com"))
                 .thenReturn(Optional.of(existingUser));
 
-        try {
+        EmailAlreadyInUseException thrown = assertThrows(EmailAlreadyInUseException.class, () -> {
             authService.register(request);
-        } catch (RuntimeException e) {
-            assertThat(e.getMessage()).isEqualTo("Email already in use!");
-        }
+        });
+        assertThat(thrown).isNotNull();
+        assertThat(thrown.getMessage()).isEqualTo("Email already in use!");
 
         verify(userRepository, never()).save(any(User.class));
     }
@@ -145,5 +148,24 @@ public class AuthServiceTest {
         assertThat(response.token()).isEqualTo("mockedToken");
 
         verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
+    }
+
+    @Test
+    void shouldThrowExceptionIfLoginCredentialsAreInvalid() {
+        LoginRequestDto request = new LoginRequestDto("alice@example.com", "password123");
+
+        // Mock authentication manager (does nothing in unit test)
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(mock(Authentication.class));
+
+        when(userRepository.findByEmail("alice@example.com"))
+                .thenReturn(Optional.empty());
+
+        InvalidCredentialsException thrown = assertThrows(InvalidCredentialsException.class, () -> {
+            authService.login(request);
+        });
+
+        assertThat(thrown).isNotNull();
+        assertThat(thrown.getMessage()).isEqualTo("Email or password is incorrect.");
     }
 }
