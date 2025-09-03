@@ -40,7 +40,7 @@ public class AuthServiceTest {
     private AuthService authService;
 
     @Test
-    void shouldRegisterNewUserSuccessfully() {
+    void shouldRegisterNewUserSuccessfullyAndAsignAdminToSimoEmail() {
         RegisterRequestDto request = new RegisterRequestDto(
                 "Simo",
                 "simo@gmail.com",
@@ -62,6 +62,34 @@ public class AuthServiceTest {
         assertThat(responseDto.email()).isNotNull();
         assertThat(responseDto.token()).isEqualTo("mockedToken");
         assertThat(responseDto.role()).isEqualTo("ROLE_ADMIN");
+        assertThat(responseDto.message()).isEqualTo("User registered successfully!");
+
+        verify(userRepository).save(any(User.class));
+    }
+
+    @Test
+    void shouldRegisterNewUserSuccessfullyAndAssignUserToGeneralEmail() {
+        RegisterRequestDto request = new RegisterRequestDto(
+                "toufik",
+                "toufik@gmail.com",
+                "Password@123"
+        );
+
+        when(userRepository.findByEmail("toufik@gmail.com"))
+                .thenReturn(Optional.empty());
+
+        when(passwordEncoder.encode("Password@123"))
+                .thenReturn("encodedPassword");
+
+        when(jwtUtil.generateToken("toufik@gmail.com"))
+                .thenReturn("mockedToken");
+
+        AuthResponseDto responseDto = authService.register(request);
+
+        assertThat(responseDto).isNotNull();
+        assertThat(responseDto.email()).isNotNull();
+        assertThat(responseDto.token()).isEqualTo("mockedToken");
+        assertThat(responseDto.role()).isEqualTo("ROLE_USER");
         assertThat(responseDto.message()).isEqualTo("User registered successfully!");
 
         verify(userRepository).save(any(User.class));
