@@ -2,7 +2,7 @@ package com.simo.learnspringboot.learnspringboot.service;
 
 import com.simo.learnspringboot.learnspringboot.dto.*;
 import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.EmailAlreadyInUseException;
-import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.InvalidCredentialsException;
+import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.InvalidAuthCredentialsException;
 import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.InvalidTokenException;
 import com.simo.learnspringboot.learnspringboot.model.User;
 import com.simo.learnspringboot.learnspringboot.repository.UserRepository;
@@ -162,7 +162,7 @@ public class AuthServiceTest {
         when(userRepository.findByEmail("alice@example.com"))
                 .thenReturn(Optional.empty());
 
-        InvalidCredentialsException thrown = assertThrows(InvalidCredentialsException.class, () -> authService.login(request));
+        InvalidAuthCredentialsException thrown = assertThrows(InvalidAuthCredentialsException.class, () -> authService.login(request));
 
         assertThat(thrown).isNotNull();
         assertThat(thrown.getMessage()).isEqualTo("Email or password is incorrect.");

@@ -1,7 +1,7 @@
 package com.simo.learnspringboot.learnspringboot.exception_handler;
 
 import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.EmailAlreadyInUseException;
-import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.InvalidCredentialsException;
+import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.InvalidAuthCredentialsException;
 import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.InvalidTokenException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -84,8 +84,8 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.CONFLICT);
     }
 
-    @ExceptionHandler(InvalidCredentialsException.class)
-    public ResponseEntity<Object> handleInvalidCredentialsException(InvalidCredentialsException ex) {
+    @ExceptionHandler(InvalidAuthCredentialsException.class)
+    public ResponseEntity<Object> handleInvalidCredentialsException(InvalidAuthCredentialsException ex) {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.UNAUTHORIZED.value());

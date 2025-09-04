@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.simo.learnspringboot.learnspringboot.dto.*;
 import com.simo.learnspringboot.learnspringboot.exception_handler.GlobalExceptionHandler;
 import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.EmailAlreadyInUseException;
-import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.InvalidCredentialsException;
+import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.InvalidAuthCredentialsException;
 import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.InvalidTokenException;
 import com.simo.learnspringboot.learnspringboot.service.AuthService;
 import org.junit.jupiter.api.BeforeEach;
@@ -123,7 +123,7 @@ class AuthControllerTest {
         );
 
         when(authService.login(request))
-                .thenThrow(new InvalidCredentialsException("Invalid credentials"));
+                .thenThrow(new InvalidAuthCredentialsException("Invalid credentials"));
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
