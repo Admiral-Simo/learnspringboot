@@ -45,8 +45,10 @@ public class AuthService {
         user.setName(request.name());
         user.setEmail(request.email());
         user.setPassword(passwordEncoder.encode(request.password()));
+        user.setVerified(false);
+        user.setEmailVerificationToken(UUID.randomUUID().toString());
 
-        if (request.email().equals("simo@gmail.com")) {
+        if (request.email().equals("mohamedkhalisgm@gmail.com")) {
             user.setRole("ROLE_ADMIN");
         } else {
             user.setRole("ROLE_USER");
@@ -54,10 +56,10 @@ public class AuthService {
 
         userRepository.save(user);
 
-        String token = jwtUtil.generateToken(user.getEmail());
+        emailService.sendVerificationEmail(user.getEmail(), user.getEmailVerificationToken());
 
         return new AuthResponseDto(
-                token,
+                null,
                 user.getEmail(),
                 user.getRole(),
                 "User registered successfully!"
@@ -110,5 +112,16 @@ public class AuthService {
         userRepository.save(user);
 
         return "Password has been successfully reset.";
+    }
+
+    public String verifyEmail(String token) {
+        User user = userRepository.findByEmailVerificationToken(token)
+                .orElseThrow(() -> new InvalidTokenException("Invalid email verification token."));
+
+        user.setVerified(true);
+        user.setEmailVerificationToken(null);
+        userRepository.save(user);
+
+        return "Email verified successfully!";
     }
 }

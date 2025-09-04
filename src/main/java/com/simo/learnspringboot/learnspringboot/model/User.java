@@ -18,6 +18,9 @@ public class User {
     private String passwordResetToken;
     private LocalDateTime tokenExpiryDate;
 
+    private String emailVerificationToken;
+    private boolean verified = false;
+
     private String name;
 
     @Column(unique = true, nullable = false)

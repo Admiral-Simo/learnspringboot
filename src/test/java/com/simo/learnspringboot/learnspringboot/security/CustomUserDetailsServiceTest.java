@@ -8,6 +8,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -34,6 +35,7 @@ public class CustomUserDetailsServiceTest {
         user.setEmail("simo@gmail.com");
         user.setPassword("password");
         user.setRole("ROLE_ADMIN");
+        user.setVerified(true);
 
         // expect
         when(userRepository.findByEmail("simo@gmail.com"))
@@ -76,4 +78,25 @@ public class CustomUserDetailsServiceTest {
         // verification
         verify(userRepository).findByEmail(email);
     }
-}
+
+    // Add this new test method
+    @Test
+    @DisplayName("Should throw DisabledException if user is not verified")
+    void loadUserByUsername_UserNotVerified_ThrowsDisabledException() {
+        // Arrange
+        String email = "unverified@gmail.com";
+        User unverifiedUser = new User();
+        unverifiedUser.setEmail(email);
+        unverifiedUser.setPassword("password");
+        unverifiedUser.setRole("ROLE_USER");
+        unverifiedUser.setVerified(false); // Explicitly unverified
+
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(unverifiedUser));
+
+        // Act & Assert
+        DisabledException thrown = assertThrows(DisabledException.class, () -> {
+            customUserDetailsService.loadUserByUsername(email);
+        });
+
+        assertThat(thrown.getMessage()).isEqualTo("User account is not verified. Please check your email.");
+    }}

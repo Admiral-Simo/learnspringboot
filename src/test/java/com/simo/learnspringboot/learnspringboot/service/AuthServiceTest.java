@@ -9,6 +9,7 @@ import com.simo.learnspringboot.learnspringboot.repository.UserRepository;
 import com.simo.learnspringboot.learnspringboot.security.JwtUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -46,31 +47,53 @@ public class AuthServiceTest {
     private AuthService authService;
 
     @Test
-    void shouldRegisterNewUserSuccessfullyAndAsignAdminToSimoEmail() {
+    void shouldRegisterNewUserSuccessfullyAndAssignAdminToSimoEmail() {
         RegisterRequestDto request = new RegisterRequestDto(
                 "Simo",
-                "simo@gmail.com",
+                "mohamedkhalisgm@gmail.com",
                 "Password@123"
         );
 
-        when(userRepository.findByEmail("simo@gmail.com"))
+        when(userRepository.findByEmail("mohamedkhalisgm@gmail.com"))
                 .thenReturn(Optional.empty());
 
         when(passwordEncoder.encode("Password@123"))
                 .thenReturn("encodedPassword");
 
-        when(jwtUtil.generateToken("simo@gmail.com"))
-                .thenReturn("mockedToken");
-
         AuthResponseDto responseDto = authService.register(request);
 
         assertThat(responseDto).isNotNull();
         assertThat(responseDto.email()).isNotNull();
-        assertThat(responseDto.token()).isEqualTo("mockedToken");
+        assertThat(responseDto.token()).isNull();
         assertThat(responseDto.role()).isEqualTo("ROLE_ADMIN");
         assertThat(responseDto.message()).isEqualTo("User registered successfully!");
 
         verify(userRepository).save(any(User.class));
+    }
+
+    @Test
+    void register_ShouldCreateUnverifiedUserWithTokenAndSendEmail() {
+        // Arrange
+        RegisterRequestDto request = new RegisterRequestDto("NewUser", "new@example.com", "Password@123");
+        when(userRepository.findByEmail(request.email())).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(anyString())).thenReturn("hashedPassword");
+
+        // Use an ArgumentCaptor to inspect the user object that gets saved
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+
+        // Act
+        authService.register(request);
+
+        // Assert
+        // Verify that the save method was called and capture the user
+        verify(userRepository).save(userCaptor.capture());
+        User savedUser = userCaptor.getValue();
+
+        assertThat(savedUser.isVerified()).isFalse(); // Must be unverified
+        assertThat(savedUser.getEmailVerificationToken()).isNotNull().isNotEmpty(); // Must have a token
+
+        // Verify an email was sent with the correct details
+        verify(emailService).sendVerificationEmail(eq(savedUser.getEmail()), eq(savedUser.getEmailVerificationToken()));
     }
 
     @Test
@@ -87,14 +110,11 @@ public class AuthServiceTest {
         when(passwordEncoder.encode("Password@123"))
                 .thenReturn("encodedPassword");
 
-        when(jwtUtil.generateToken("toufik@gmail.com"))
-                .thenReturn("mockedToken");
-
         AuthResponseDto responseDto = authService.register(request);
 
         assertThat(responseDto).isNotNull();
         assertThat(responseDto.email()).isNotNull();
-        assertThat(responseDto.token()).isEqualTo("mockedToken");
+        assertThat(responseDto.token()).isNull();
         assertThat(responseDto.role()).isEqualTo("ROLE_USER");
         assertThat(responseDto.message()).isEqualTo("User registered successfully!");
 
@@ -231,5 +251,44 @@ public class AuthServiceTest {
         assertThat(thrown).isNotNull();
         assertThat(thrown.getMessage()).isEqualTo("Invalid or expired password reset token.");
         verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void verifyEmail_ValidToken_ShouldVerifyUser() {
+        String token = "validToken";
+        User unverifiedUser = new User();
+        unverifiedUser.setVerified(false);
+        unverifiedUser.setEmailVerificationToken(token);
+
+        when(userRepository.findByEmailVerificationToken(token))
+                .thenReturn(Optional.of(unverifiedUser));
+
+        ArgumentCaptor<User> argumentCaptor = ArgumentCaptor.forClass(User.class);
+
+        String responseMessage = authService.verifyEmail(token);
+
+        verify(userRepository).save(argumentCaptor.capture());
+        User savedUser = argumentCaptor.getValue();
+
+        assertThat(responseMessage).isEqualTo("Email verified successfully!");
+        assertThat(savedUser.isVerified()).isTrue();
+        assertThat(savedUser.getEmailVerificationToken()).isNull();
+    }
+
+
+    @Test
+    void verifyEmail_InvalidToken_Failure() {
+        String token = "invalidToken";
+        User unverifiedUser = new User();
+        unverifiedUser.setVerified(false);
+        unverifiedUser.setEmailVerificationToken(token);
+
+        when(userRepository.findByEmailVerificationToken(token))
+                .thenReturn(Optional.empty());
+
+        InvalidTokenException thrown = assertThrows(InvalidTokenException.class, () -> authService.verifyEmail(token));
+
+        assertThat(thrown).isNotNull();
+        assertThat(thrown.getMessage()).isEqualTo("Invalid email verification token.");
     }
 }

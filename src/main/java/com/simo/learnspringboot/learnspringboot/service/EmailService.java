@@ -51,4 +51,41 @@ public class EmailService {
             throw new RuntimeException("Failed to send email", e);
         }
     }
+
+    public void sendVerificationEmail(String to, String token) {
+        try {
+            MimeMessage message = javaMailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+            helper.setTo(to);
+            helper.setSubject("✅ Verify Your Email Address");
+
+            String verifyUrl = "http://localhost:8080/api/auth/verify-email?token=" + token;
+
+            String htmlContent = """
+                <html>
+                    <body style="font-family: Arial, sans-serif; line-height:1.6; color:#333;">
+                        <h2 style="color:#28B463;">Email Verification</h2>
+                        <p>Thank you for registering! Please verify your email address by clicking the button below:</p>
+                        <p style="text-align:center;">
+                            <a href="%s" 
+                               style="background-color:#28B463; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;">
+                               Verify Email
+                            </a>
+                        </p>
+                        <p>If you did not create an account, please ignore this email.</p>
+                        <hr>
+                        <p style="font-size:12px; color:#888;">This is an automated message. Do not reply.</p>
+                    </body>
+                </html>
+            """.formatted(verifyUrl);
+
+            helper.setText(htmlContent, true); // "true" enables HTML
+
+            javaMailSender.send(message);
+
+        } catch (MailException | MessagingException e) {
+            throw new RuntimeException("Failed to send email", e);
+        }
+    }
 }
