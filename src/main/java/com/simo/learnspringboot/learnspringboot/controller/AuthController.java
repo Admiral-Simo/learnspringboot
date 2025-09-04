@@ -1,11 +1,11 @@
 package com.simo.learnspringboot.learnspringboot.controller;
 
-import com.simo.learnspringboot.learnspringboot.dto.AuthResponseDto;
-import com.simo.learnspringboot.learnspringboot.dto.LoginRequestDto;
-import com.simo.learnspringboot.learnspringboot.dto.RegisterRequestDto;
+import com.simo.learnspringboot.learnspringboot.dto.*;
 import com.simo.learnspringboot.learnspringboot.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -25,5 +25,18 @@ public class AuthController {
     @PostMapping("/login")
     public AuthResponseDto login(@RequestBody LoginRequestDto request) {
         return authService.login(request);
+    }
+
+
+    @PostMapping("/forget-password")
+    public Map<String, String> forgetPassword(@Valid @RequestBody ForgetPasswordRequestDto request) {
+        String message = authService.forgetPassword(request);
+        return Map.of("message", message);
+    }
+
+    @PostMapping("/reset-password")
+    public Map<String, String> resetPassword(@Valid @RequestBody ResetPasswordRequestDto request) {
+        String message = authService.resetPassword(request);
+        return Map.of("message", message);
     }
 }

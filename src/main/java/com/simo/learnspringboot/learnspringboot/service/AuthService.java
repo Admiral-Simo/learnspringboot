@@ -3,6 +3,7 @@ package com.simo.learnspringboot.learnspringboot.service;
 import com.simo.learnspringboot.learnspringboot.dto.*;
 import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.EmailAlreadyInUseException;
 import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.InvalidCredentialsException;
+import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.InvalidTokenException;
 import com.simo.learnspringboot.learnspringboot.model.User;
 import com.simo.learnspringboot.learnspringboot.repository.UserRepository;
 import com.simo.learnspringboot.learnspringboot.security.JwtUtil;
@@ -12,7 +13,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -98,10 +98,10 @@ public class AuthService {
 
     public String resetPassword(ResetPasswordRequestDto request) {
         User user = userRepository.findByPasswordResetToken(request.token())
-                .orElseThrow(() -> new InvalidCredentialsException("Invalid or expired password reset token."));
+                .orElseThrow(() -> new InvalidTokenException("Invalid or expired password reset token."));
 
         if (user.getTokenExpiryDate().isBefore(LocalDateTime.now())) {
-            throw new InvalidCredentialsException("Invalid or expired password reset token.");
+            throw new InvalidTokenException("Invalid or expired password reset token.");
         }
 
         user.setPassword(passwordEncoder.encode(request.newPassword()));

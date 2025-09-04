@@ -3,6 +3,7 @@ package com.simo.learnspringboot.learnspringboot.service;
 import com.simo.learnspringboot.learnspringboot.dto.*;
 import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.EmailAlreadyInUseException;
 import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.InvalidCredentialsException;
+import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.InvalidTokenException;
 import com.simo.learnspringboot.learnspringboot.model.User;
 import com.simo.learnspringboot.learnspringboot.repository.UserRepository;
 import com.simo.learnspringboot.learnspringboot.security.JwtUtil;
@@ -225,7 +226,7 @@ public class AuthServiceTest {
         when(userRepository.findByPasswordResetToken("invalidToken"))
                 .thenReturn(Optional.empty());
 
-        InvalidCredentialsException thrown = assertThrows(InvalidCredentialsException.class, () -> authService.resetPassword(request) );
+        InvalidTokenException thrown = assertThrows(InvalidTokenException.class, () -> authService.resetPassword(request) );
 
         assertThat(thrown).isNotNull();
         assertThat(thrown.getMessage()).isEqualTo("Invalid or expired password reset token.");

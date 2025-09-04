@@ -2,12 +2,11 @@ package com.simo.learnspringboot.learnspringboot.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.simo.learnspringboot.learnspringboot.dto.AuthResponseDto;
-import com.simo.learnspringboot.learnspringboot.dto.LoginRequestDto;
-import com.simo.learnspringboot.learnspringboot.dto.RegisterRequestDto;
+import com.simo.learnspringboot.learnspringboot.dto.*;
 import com.simo.learnspringboot.learnspringboot.exception_handler.GlobalExceptionHandler;
 import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.EmailAlreadyInUseException;
 import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.InvalidCredentialsException;
+import com.simo.learnspringboot.learnspringboot.exception_handler.exceptions.InvalidTokenException;
 import com.simo.learnspringboot.learnspringboot.service.AuthService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -187,5 +186,80 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.errors.email").value("email is required"));
 
         verify(authService, never()).register(any(RegisterRequestDto.class));
+    }
+
+    @Test
+    void shouldHandleForgetPasswordRequest() throws Exception {
+        ForgetPasswordRequestDto request = new ForgetPasswordRequestDto("simo@gmail.com");
+        String expectedMessage = "If the email exists, a password reset link has been sent.";
+
+        when(authService.forgetPassword(any(ForgetPasswordRequestDto.class)))
+                .thenReturn(expectedMessage);
+
+        mockMvc.perform(post("/api/auth/forget-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value(expectedMessage));
+
+        verify(authService).forgetPassword(request);
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenForgetPasswordEmailIsInvalid() throws Exception {
+        // Prepare an invalid request DTO
+        ForgetPasswordRequestDto request = new ForgetPasswordRequestDto(
+                "somethinggmail.com" // Invalid: bad format
+        );
+
+        mockMvc.perform(post("/api/auth/forget-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.email").value("Should be a valid email address."));
+
+        verify(authService, never()).forgetPassword(any(ForgetPasswordRequestDto.class));
+    }
+
+    @Test
+    void shouldHandleResetPassword() throws Exception {
+        String expectedMessage = "Password has been successfully reset.";
+
+        when(authService.resetPassword(any(ResetPasswordRequestDto.class)))
+                .thenReturn(expectedMessage);
+        // Prepare an invalid request DTO
+        ResetPasswordRequestDto request = new ResetPasswordRequestDto(
+                "token",
+                "NewPassword@123"
+        );
+
+        mockMvc.perform(post("/api/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value(expectedMessage));
+
+        verify(authService).resetPassword(any(ResetPasswordRequestDto.class));
+    }
+
+    @Test
+    void shouldHandleResetPasswordInvalidOrExpiredToken() throws Exception {
+        String expectedMessage = "Invalid or expired password reset token.";
+
+        when(authService.resetPassword(any(ResetPasswordRequestDto.class)))
+                .thenThrow(new InvalidTokenException(expectedMessage));
+        // Prepare an invalid request DTO
+        ResetPasswordRequestDto request = new ResetPasswordRequestDto(
+                "token",
+                "NewPassword@123"
+        );
+
+        mockMvc.perform(post("/api/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.details").value(expectedMessage));
+
+        verify(authService).resetPassword(any(ResetPasswordRequestDto.class));
     }
 }
